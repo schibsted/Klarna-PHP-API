@@ -1,5 +1,5 @@
 {
-    "name": "e-butik/klarna-php-api",
+    "name": "schibsted/klarna-php-api",
     "description": "Klarna's PHP API",
     "homepage": "http://integration.klarna.com",
     "license": "BSD-2",
