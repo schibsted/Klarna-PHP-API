@@ -18,7 +18,8 @@
             "klarnapclass.php",
             "Language.php",
             "pclasses/",
-            "checkout/"
+            "checkout/",
+            "log/"
         ]
     }
 }

@@ -390,8 +390,9 @@ class Klarna
      */
     protected $config;
 
-    protected $curlOptions;
-    protected $defaultClientIP;
+    /**
+     * @var KlarnaLogInterface
+     */
     protected $logger;
 
     /**
@@ -554,8 +555,8 @@ class Klarna
             $this->_url['scheme']
         );
 
-        if ($this->curlOptions) {
-            $this->xmlrpc->SetCurlOptions($this->curlOptions);
+        if ($this->config['curlOptions']) {
+            $this->xmlrpc->SetCurlOptions($this->config['curlOptions']);
         }
         $this->xmlrpc->setSSLVerifyHost(2);
 
@@ -590,10 +591,8 @@ class Klarna
      * @param string $pcURI     PClass URI.
      * @param bool   $ssl       Whether HTTPS (HTTP over SSL) or HTTP is used.
      * @param bool   $candice   Error reporting to Klarna.
-     *
      * @param array  $curlOptions       Options for curl to set on XMLRPC
      * @param string $defaultClientIP   IP to use when client IP is empty (cronjob)
-     * @param mixed  $logger            Logs request, response and error
      *
      * @see Klarna::setConfig()
      * @see KlarnaConfig
@@ -605,7 +604,7 @@ class Klarna
         $eid, $secret, $country, $language, $currency,
         $mode = Klarna::LIVE, $pcStorage = 'json', $pcURI = 'pclasses.json',
         $ssl = true, $candice = true,
-        $curlOptions = array(), $defaultClientIP = '0.0.0.0', $logger = null
+        $curlOptions = array(), $defaultClientIP = '0.0.0.0'
     ) {
         try {
             KlarnaConfig::$store = false;
@@ -621,10 +620,8 @@ class Klarna
             $this->config['candice'] = $candice;
             $this->config['pcStorage'] = $pcStorage;
             $this->config['pcURI'] = $pcURI;
-
-            $this->curlOptions = $curlOptions;
-            $this->defaultClientIP = $defaultClientIP;
-            $this->logger = $logger;
+            $this->config['curlOptions'] = $curlOptions;
+            $this->config['defaultClientIP'] = $defaultClientIP;
 
             $this->init();
         } catch(Exception $e) {
@@ -651,6 +648,25 @@ class Klarna
 
         $this->config = $config;
         $this->init();
+    }
+
+    /**
+     * @return KlarnaLogInterface
+     */
+    public function getLogger()
+    {
+        if (!$this->logger) {
+            $this->setLogger( new KlarnaLogVoid());
+        }
+        return $this->logger;
+    }
+
+    /**
+     * @param $logger KlarnaLogInterface
+     */
+    public function setLogger(KlarnaLogInterface $logger)
+    {
+        $this->logger = $logger;
     }
 
     /**
@@ -1209,7 +1225,7 @@ class Klarna
             return trim($forwarded[0]);
         }
 
-        return $tmp_ip ? $tmp_ip : $this->defaultClientIP;
+        return $tmp_ip ? $tmp_ip : $this->config['defaultClientIP'];
     }
 
     /**
@@ -3791,7 +3807,7 @@ class Klarna
             return true;
         }
 
-        $requestId = $this->logger->request($method, $array);
+        $requestId = $this->getLogger()->request($method, $array);
 
         try {
             /*
@@ -3846,12 +3862,12 @@ class Klarna
             }
 
             if ($status !== 0) {
-                $this->logger->error($method, $xmlrpcresp->faultString(), $status, $requestId);
+                $this->getLogger()->error($method, $xmlrpcresp->faultString(), $status, $requestId);
                 throw new KlarnaException($xmlrpcresp->faultString(), $status);
             }
 
             $response = php_xmlrpc_decode($xmlrpcresp->value());
-            $this->logger->response($method, $response, $requestId);
+            $this->getLogger()->response($method, $response, $requestId);
             return $response;
         }
         catch(KlarnaException $e) {
@@ -3859,7 +3875,7 @@ class Klarna
             throw $e;
         }
         catch(Exception $e) {
-            $this->logger->error($method, $e->getMessage(), $e->getCode(), $requestId);
+            $this->getLogger()->error($method, $e->getMessage(), $e->getCode(), $requestId);
             throw new KlarnaException($e->getMessage(), $e->getCode());
         }
     }
